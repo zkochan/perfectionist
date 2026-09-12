@@ -9,22 +9,22 @@
 // Not flagged: a unit struct has no fields.
 struct Unit;
 
-// 1.
+// Bad: 1 field.
 struct One {
     field_1: u32,
 }
 
-// 3.
+// Bad: 3 fields.
 struct Three {
     field_1: u32,
     field_2: u32,
     field_3: u32,
 }
 
-// 2: a tuple struct's fields count.
+// Bad: 2 fields — a tuple struct's fields count.
 struct Pair(u32, u32);
 
-// 1: a generic struct is measured like any other.
+// Bad: 1 field — a generic struct is measured like any other.
 struct Wrapper<Value> {
     value: Value,
 }
@@ -40,7 +40,7 @@ union Bits {
     unsigned: u32,
 }
 
-// 1: a struct declared inside a function is measured.
+// Bad: 1 field — a struct declared inside a function is measured.
 fn holder() {
     struct Local {
         field_1: u32,

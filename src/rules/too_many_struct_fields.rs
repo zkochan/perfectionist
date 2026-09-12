@@ -30,7 +30,9 @@ declare_tool_lint! {
     /// functions that only need that group can then take instead.
     ///
     /// A settings struct that mirrors a configuration file is the usual
-    /// exception; allow it at the site with a `reason` that says so.
+    /// exception; write
+    /// `#[expect(perfectionist::too_many_struct_fields, reason = "...")]`
+    /// at the site, with a reason that says so.
     ///
     /// ### Interaction with Clippy
     ///
@@ -89,9 +91,10 @@ struct Config {
     /// Defaults to `10`.
     max_fields: usize,
     /// Whether test code is left alone: structs inside a `#[cfg(test)]`
-    /// module or an integration-test or benchmark target. Defaults to
-    /// `false`, so a test fixture is held to the same limit as the code
-    /// it exercises.
+    /// module, structs inside a `#[test]` function, and everything in
+    /// an integration-test or benchmark target. Defaults to `false`, so
+    /// a test fixture is held to the same limit as the code it
+    /// exercises.
     exempt_tests: bool,
 }
 
@@ -135,6 +138,16 @@ impl<'tcx> LateLintPass<'tcx> for TooManyStructFields {
             VariantData::Struct { fields, .. } | VariantData::Tuple(fields, ..) => fields.len(),
             VariantData::Unit(..) => return,
         };
+        // No `hir_in_external_macro` guard, though the diagnostic span
+        // below is `def_span` -- the `struct Name` header -- and so is
+        // narrower than the field list that produced the violation.
+        // Both halves of the proc-macro gap are already closed: an
+        // expansion from another crate is filtered by
+        // `report_in_external_macro: false`, because `def_span` inherits
+        // the expansion's context rather than a user-attribute span; and
+        // a `macro_rules!` in this crate, which that flag does not
+        // cover, is what `from_expansion` below stops. Removing it makes
+        // the `wide!` case in `ui/too_many_struct_fields.rs` fire.
         if count <= self.config.max_fields || item.span.from_expansion() {
             return;
         }

@@ -3,7 +3,7 @@
 #![register_tool(perfectionist)]
 #![allow(dead_code, unused, reason = "ui fixture")]
 
-// Bad: eleven fields, one above the default limit.
+// Bad: 11 fields, one above the default limit of 10.
 struct Eleven {
     field_1: u32,
     field_2: u32,
@@ -18,7 +18,8 @@ struct Eleven {
     field_11: u32,
 }
 
-// Good: ten is not above the limit.
+// Not flagged: 10 fields is exactly the limit, and a struct is
+// flagged only above the limit, never at it.
 struct Ten {
     field_1: u32,
     field_2: u32,
@@ -32,7 +33,7 @@ struct Ten {
     field_10: u32,
 }
 
-// Good: the eleven fields split by what they are.
+// Good: the 11 fields split by what they are.
 struct Split {
     first: FirstHalf,
     second: SecondHalf,
@@ -55,10 +56,10 @@ struct SecondHalf {
     field_6: u32,
 }
 
-// Bad: a tuple struct is measured too.
+// Bad: 11 fields — a tuple struct is measured too.
 struct Tuple(u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, u32);
 
-// Good: an enum's variants are not measured.
+// Not flagged: an enum's variants are not measured.
 enum Shape {
     Wide {
         field_1: u32,
@@ -75,7 +76,7 @@ enum Shape {
     },
 }
 
-// Good: a struct a macro expands to is not measured.
+// Not flagged: a struct a macro expands to is not measured.
 macro_rules! wide {
     ($name:ident) => {
         struct $name {

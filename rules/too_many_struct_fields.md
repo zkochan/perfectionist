@@ -30,7 +30,9 @@ each group is a smaller struct with a name of its own, which the
 functions that only need that group can then take instead.
 
 A settings struct that mirrors a configuration file is the usual
-exception; allow it at the site with a `reason` that says so.
+exception; write
+`#[expect(perfectionist::too_many_struct_fields, reason = "...")]`
+at the site, with a reason that says so.
 
 ## Interaction with Clippy
 
@@ -90,6 +92,7 @@ Defaults to `10`.
 - _Optional_
 
 Whether test code is left alone: structs inside a `#[cfg(test)]`
-module or an integration-test or benchmark target. Defaults to
-`false`, so a test fixture is held to the same limit as the code
-it exercises.
+module, structs inside a `#[test]` function, and everything in
+an integration-test or benchmark target. Defaults to `false`, so
+a test fixture is held to the same limit as the code it
+exercises.

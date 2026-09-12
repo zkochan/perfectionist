@@ -49,39 +49,57 @@ fn zero_threshold_reports_every_field_count() {
 const LIB_WITH_TEST_MODULE: &str =
     include_str!("fixtures/too_many_struct_fields/lib_with_test_module.rs");
 
+const LIB_SOURCES: &[(&str, &str)] = &[("src/lib.rs", LIB_WITH_TEST_MODULE)];
+
+/// The same over-limit struct in an integration test and in a
+/// benchmark. Neither carries a `#[cfg(test)]` gate nor a `#[test]`
+/// function, so they are test code only through the Cargo target they
+/// sit in -- the half of `item_in_test_code` that no attribute reaches.
+const TARGET_SOURCES: &[(&str, &str)] = &[
+    ("src/lib.rs", "pub fn nothing() {}\n"),
+    (
+        "tests/it.rs",
+        include_str!("fixtures/too_many_struct_fields/target_struct.rs"),
+    ),
+    (
+        "benches/bench.rs",
+        include_str!("fixtures/too_many_struct_fields/target_struct.rs"),
+    ),
+];
+
 /// Run the fixture and return its stderr, asserting that `cargo dylint`
 /// itself succeeded.
-fn run(package_name: &str, config: &str) -> String {
+fn run(package_name: &str, sources: &[(&str, &str)], config: &str) -> String {
     let (_temp, stderr, success) = run_project_with_config(
         package_name,
         cargo_manifest_dir(),
         &shared_target_dir(),
-        &[("src/lib.rs", LIB_WITH_TEST_MODULE)],
+        sources,
         config,
     );
     assert!(success, "`cargo dylint` failed; stderr was:\n{stderr}");
     stderr
 }
 
-fn assert_flagged(stderr: &str, function: &str) {
-    let expected = format!("struct `{function}` has");
+fn assert_flagged(stderr: &str, name: &str) {
+    let expected = format!("struct `{name}` has");
     assert!(
         stderr.contains(&expected),
-        "expected `{function}` to be flagged; stderr was:\n{stderr}",
+        "expected `{name}` to be flagged; stderr was:\n{stderr}",
     );
 }
 
-fn assert_not_flagged(stderr: &str, function: &str) {
-    let unexpected = format!("struct `{function}` has");
+fn assert_not_flagged(stderr: &str, name: &str) {
+    let unexpected = format!("struct `{name}` has");
     assert!(
         !stderr.contains(&unexpected),
-        "expected `{function}` to be exempt; stderr was:\n{stderr}",
+        "expected `{name}` to be exempt; stderr was:\n{stderr}",
     );
 }
 
 #[test]
 fn test_code_is_measured_by_default() {
-    let stderr = run("fixture_tmsf_default", "");
+    let stderr = run("fixture_tmsf_default", LIB_SOURCES, "");
     assert_flagged(&stderr, "Production");
     assert_flagged(&stderr, "CfgTestFixture");
     assert_flagged(&stderr, "InTest");
@@ -91,6 +109,7 @@ fn test_code_is_measured_by_default() {
 fn exempt_tests_leaves_test_code_alone() {
     let stderr = run(
         "fixture_tmsf_test_exception",
+        LIB_SOURCES,
         text_block_fnl! {
             r#"["perfectionist::too_many_struct_fields"]"#
             "exempt_tests = true"
@@ -99,4 +118,23 @@ fn exempt_tests_leaves_test_code_alone() {
     assert_flagged(&stderr, "Production");
     assert_not_flagged(&stderr, "CfgTestFixture");
     assert_not_flagged(&stderr, "InTest");
+}
+
+#[test]
+fn a_test_target_is_measured_by_default() {
+    let stderr = run("fixture_tmsf_target_default", TARGET_SOURCES, "");
+    assert_flagged(&stderr, "InTarget");
+}
+
+#[test]
+fn exempt_tests_leaves_a_test_target_alone() {
+    let stderr = run(
+        "fixture_tmsf_target_exception",
+        TARGET_SOURCES,
+        text_block_fnl! {
+            r#"["perfectionist::too_many_struct_fields"]"#
+            "exempt_tests = true"
+        },
+    );
+    assert_not_flagged(&stderr, "InTarget");
 }
