@@ -2,10 +2,10 @@
 
 # `perfectionist::overly_long_method_chain`
 
-- _Default state:_ `active`
+- _Default state:_ `inactive`
 - _Source:_ [`src/rules/overly_long_method_chain.rs`](../src/rules/overly_long_method_chain.rs)
 
-> expression chains more method calls than the configured maximum
+> expression chain has more method calls than the configured maximum
 
 ## What it does
 
@@ -16,7 +16,7 @@ is above `max_calls` (default `5`).
 Only method calls on the chain's spine count: the receiver of
 each call, down to the value the chain starts from. A run of the
 same method — `.arg("-v").arg("build").arg(path)` — counts once,
-so a builder is measured by its distinct steps. A `?` or an
+so a builder is measured by its distinct calls. A `?` or an
 `.await` between two calls neither counts nor breaks the chain.
 A field access (`self.items.iter()` starts at `self.items`) and
 a function call (`Vec::new().push(1)` starts at `Vec::new()`)
@@ -26,6 +26,17 @@ produced by a macro expansion is not measured.
 
 Test code is measured like any other code; set
 `exempt_tests` to leave it alone.
+
+Where a chain stops being readable is a matter of taste, and a
+codebase written around iterator pipelines will disagree with
+one written around named intermediates. The rule is therefore
+inactive by default — enable it per crate by adding to
+`dylint.toml`:
+
+```toml
+[perfectionist]
+enable = ["overly_long_method_chain"]
+```
 
 ## Why restrict this?
 

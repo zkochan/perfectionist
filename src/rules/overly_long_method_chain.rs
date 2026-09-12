@@ -1,7 +1,7 @@
 use crate::common::{DefaultState, span_is_macro_generated};
 use crate::rule_index::{Register, rule};
 use crate::test_code::item_in_test_code;
-use clippy_utils::diagnostics::span_lint_and_help;
+use clippy_utils::diagnostics::span_lint_and_then;
 use rustc_hir::{Expr, ExprKind, HirId, MatchSource};
 use rustc_lint::{LateContext, LateLintPass, LintStore};
 use rustc_session::{declare_tool_lint, impl_lint_pass};
@@ -17,7 +17,7 @@ declare_tool_lint! {
     /// Only method calls on the chain's spine count: the receiver of
     /// each call, down to the value the chain starts from. A run of the
     /// same method — `.arg("-v").arg("build").arg(path)` — counts once,
-    /// so a builder is measured by its distinct steps. A `?` or an
+    /// so a builder is measured by its distinct calls. A `?` or an
     /// `.await` between two calls neither counts nor breaks the chain.
     /// A field access (`self.items.iter()` starts at `self.items`) and
     /// a function call (`Vec::new().push(1)` starts at `Vec::new()`)
@@ -27,6 +27,17 @@ declare_tool_lint! {
     ///
     /// Test code is measured like any other code; set
     /// `exempt_tests` to leave it alone.
+    ///
+    /// Where a chain stops being readable is a matter of taste, and a
+    /// codebase written around iterator pipelines will disagree with
+    /// one written around named intermediates. The rule is therefore
+    /// inactive by default — enable it per crate by adding to
+    /// `dylint.toml`:
+    ///
+    /// ```toml
+    /// [perfectionist]
+    /// enable = ["overly_long_method_chain"]
+    /// ```
     ///
     /// ### Why restrict this?
     ///
@@ -71,15 +82,33 @@ declare_tool_lint! {
     /// ```
     pub perfectionist::OVERLY_LONG_METHOD_CHAIN,
     Warn,
-    "expression chains more method calls than the configured maximum",
+    "expression chain has more method calls than the configured maximum",
     report_in_external_macro: false
 }
 
 const CONFIG_KEY: &str = "perfectionist::overly_long_method_chain";
 
-/// Enough for `iter().filter(..).map(..).collect()` with a stage to
+/// Enough for `iter().filter(..).map(..).collect()` with a call to
 /// spare.
 const DEFAULT_MAX_CALLS: usize = 5;
+
+/// What to do. The count is a stand-in for the real complaint -- the
+/// chain's intermediate values have no names -- so the help asks for a
+/// name rather than for a shorter chain, and says what the name should
+/// be about. Naming the remedy after the cut (`an intermediate
+/// result`) would hand the reader the very name the rule is trying to
+/// prevent.
+const NAMING_HELP: &str = "give a stage a name — bind it to a `let`, or move a run of stages \
+                           into a function — named for the value it produces, not for the \
+                           stages it replaces";
+
+/// How to tell the fix did not work, in the shape `overly_long_file`
+/// and `excessive_nesting` use: a mechanical split passes the rule
+/// while leaving the chain exactly as unreadable, and only the name
+/// reveals it.
+const CUT_HELP: &str = "if the only name that fits describes the steps rather than the value \
+                        (`filtered`, `mapped`, `result`), the cut is in the wrong place; split \
+                        where the chain produces something you can name";
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(default, deny_unknown_fields, rename_all = "snake_case")]
@@ -113,7 +142,10 @@ pub struct OverlyLongMethodChain {
 impl_lint_pass!(OverlyLongMethodChain => [OVERLY_LONG_METHOD_CHAIN]);
 
 impl Register for rule::OverlyLongMethodChain {
-    const DEFAULT_STATE: DefaultState = DefaultState::Active;
+    /// Off by default — enable it in `dylint.toml` via the crate-wide
+    /// `[perfectionist] enable = ["overly_long_method_chain"]` (or the
+    /// `[[perfectionist.enable]]` array-of-tables form).
+    const DEFAULT_STATE: DefaultState = DefaultState::Inactive;
 
     fn register_lint(lint_store: &mut LintStore) {
         lint_store.register_lints(&[OVERLY_LONG_METHOD_CHAIN]);
@@ -148,15 +180,11 @@ impl<'tcx> LateLintPass<'tcx> for OverlyLongMethodChain {
         }
         let max = self.config.max_calls;
         let noun = if count == 1 { "call" } else { "calls" };
-        let message = format!("method chain has {count} {noun}, above the limit of {max}");
-        span_lint_and_help(
-            cx,
-            OVERLY_LONG_METHOD_CHAIN,
-            expr.span,
-            message,
-            None,
-            "bind an intermediate result to a `let` named for what it holds, or move part of the chain into a function",
-        );
+        let message = format!("method chain has {count} distinct {noun}, above the limit of {max}");
+        span_lint_and_then(cx, OVERLY_LONG_METHOD_CHAIN, expr.span, message, |diag| {
+            diag.help(NAMING_HELP);
+            diag.help(CUT_HELP);
+        });
     }
 }
 
