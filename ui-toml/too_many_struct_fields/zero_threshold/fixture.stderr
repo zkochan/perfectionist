@@ -39,5 +39,4 @@ LL |     struct Local {
    |
    = help: group related fields into a struct of their own, or split the type by the concerns its fields serve
 
-warning: 5 warnings emitted
-
+warning: N warnings emitted

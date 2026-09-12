@@ -15,5 +15,4 @@ LL | struct Tuple(u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, u32);
    |
    = help: group related fields into a struct of their own, or split the type by the concerns its fields serve
 
-warning: 2 warnings emitted
-
+warning: N warnings emitted
