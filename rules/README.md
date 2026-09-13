@@ -174,6 +174,10 @@ Lint-control attributes use the `perfectionist::` namespace.
 
   trait names in a `#[derive(...)]` list are not in the configured order
 
+- [`unordered_struct_fields`](./unordered_struct_fields.md) (default: `inactive`).
+
+  named struct fields are not in alphabetical order
+
 - [`unpinned_repo_ref`](./unpinned_repo_ref.md) (default: `active`).
 
   repository URL references a branch or tag instead of a commit SHA

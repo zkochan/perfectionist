@@ -138,6 +138,7 @@ rule_index! {
     unicode_ellipsis_in_panic_messages => UnicodeEllipsisInPanicMessages,
     unknown_perfectionist_lints => UnknownPerfectionistLints,
     unordered_derives => UnorderedDerives,
+    unordered_struct_fields => UnorderedStructFields,
     unpinned_repo_ref => UnpinnedRepoRef,
     wildcard_imports => WildcardImports,
 }

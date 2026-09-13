@@ -40,5 +40,6 @@ pub mod unicode_ellipsis_in_docs;
 pub mod unicode_ellipsis_in_panic_messages;
 pub mod unknown_perfectionist_lints;
 pub mod unordered_derives;
+pub mod unordered_struct_fields;
 pub mod unpinned_repo_ref;
 pub mod wildcard_imports;

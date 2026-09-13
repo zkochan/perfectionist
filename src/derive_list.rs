@@ -25,6 +25,8 @@ pub(crate) struct DeriveEntry {
     pub(crate) name: Symbol,
     /// Source span of the entry, covering its full path text.
     pub(crate) span: Span,
+    /// Whether the derive is a single identifier rather than a qualified path.
+    pub(crate) is_unqualified: bool,
 }
 
 /// Final path segment of every derive on the node, including
@@ -56,6 +58,7 @@ pub(crate) fn derive_entries(tokens: &TokenStream) -> Option<Vec<DeriveEntry>> {
             Some(DeriveEntry {
                 name: segment.ident.name,
                 span: entry.span(),
+                is_unqualified: entry.meta_item()?.path.segments.len() == 1,
             })
         })
         .collect()
