@@ -10,7 +10,7 @@ declare_tool_lint! {
     /// ### What it does
     ///
     /// Counts the fields of every struct — named or tuple — and flags a
-    /// struct with more than `max_fields` (default `10`).
+    /// struct with more than `max_fields`.
     ///
     /// A struct produced by a macro expansion is not measured. Enum
     /// variants and unions are not measured.
@@ -29,10 +29,10 @@ declare_tool_lint! {
     /// each group is a smaller struct with a name of its own, which the
     /// functions that only need that group can then take instead.
     ///
-    /// A settings struct that mirrors a configuration file is the usual
-    /// exception; write
+    /// Where a struct genuinely has to hold this many fields — one
+    /// deserialised straight from a configuration file, say — write
     /// `#[expect(perfectionist::too_many_struct_fields, reason = "...")]`
-    /// at the site, with a reason that says so.
+    /// at the site, with a reason that says which.
     ///
     /// ### Interaction with Clippy
     ///
@@ -72,7 +72,30 @@ declare_tool_lint! {
     ///     retry: RetryPolicy,
     ///     timeout: Duration,
     /// }
+    ///
+    /// struct Auth {
+    ///     token: Option<String>,
+    ///     username: Option<String>,
+    ///     password: Option<String>,
+    /// }
+    ///
+    /// struct Tls {
+    ///     ca_file: Option<PathBuf>,
+    ///     cert_file: Option<PathBuf>,
+    ///     key_file: Option<PathBuf>,
+    /// }
+    ///
+    /// struct RetryPolicy {
+    ///     retries: u32,
+    ///     factor: f64,
+    ///     min_timeout: Duration,
+    ///     max_timeout: Duration,
+    /// }
     /// ```
+    ///
+    /// Every field is still there; four of them shed a `retry_` prefix
+    /// that the type now carries. `base_url` and `timeout` answer to no
+    /// group, so they stay where they were.
     pub perfectionist::TOO_MANY_STRUCT_FIELDS,
     Warn,
     "struct has more fields than the configured maximum",
