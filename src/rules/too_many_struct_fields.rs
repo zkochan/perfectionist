@@ -136,7 +136,10 @@ impl<'tcx> LateLintPass<'tcx> for TooManyStructFields {
         };
         let count = match data {
             VariantData::Struct { fields, .. } | VariantData::Tuple(fields, ..) => fields.len(),
-            VariantData::Unit(..) => return,
+            // A unit struct has no fields, and no limit is below zero,
+            // so it falls out at the threshold below like any other
+            // struct rather than needing an exit of its own.
+            VariantData::Unit(..) => 0,
         };
         // No `hir_in_external_macro` guard, though the diagnostic span
         // below is `def_span` -- the `struct Name` header -- and so is
